@@ -1,0 +1,61 @@
+test("filters and sorts application data correctly", async () => {
+  const contextValue = {
+    ...mockRowContextValues,
+    selectedRow: [],
+  };
+
+  // Parse the applicationdata field in mockData
+  mockData.data.content = mockData.data.content.map(item => ({
+    ...item,
+    applicationdata: JSON.parse(item.applicationdata),
+  }));
+
+  // Debug the mock data
+  console.log("Mock Data:", mockData);
+
+  await act(async () => {
+    render(
+      <Router>
+        <RowContext.Provider value={contextValue}>
+          <AddApplicationsGrid />
+        </RowContext.Provider>
+      </Router>
+    );
+  });
+
+  // Debug the rendered output
+  screen.debug();
+
+  // Verify initial data is rendered
+  await waitFor(() => {
+    expect(screen.getByText((content, element) => content.includes("Metformin Hydrochloride 1000 mg Tablet"))).toBeInTheDocument();
+    expect(screen.getByText((content, element) => content.includes("Penciclovir Cream; 1%"))).toBeInTheDocument();
+  });
+
+  // Simulate filtering
+  const filterInput = screen.getByPlaceholderText("Filter by name"); // Replace with actual placeholder if different
+  fireEvent.change(filterInput, { target: { value: "Metformin" } });
+
+  await waitFor(() => {
+    expect(screen.getByText((content, element) => content.includes("Metformin Hydrochloride 1000 mg Tablet"))).toBeInTheDocument();
+    expect(screen.queryByText((content, element) => content.includes("Penciclovir Cream; 1%"))).not.toBeInTheDocument();
+  });
+
+  // Clear filter
+  fireEvent.change(filterInput, { target: { value: "" } });
+
+  await waitFor(() => {
+    expect(screen.getByText((content, element) => content.includes("Metformin Hydrochloride 1000 mg Tablet"))).toBeInTheDocument();
+    expect(screen.getByText((content, element) => content.includes("Penciclovir Cream; 1%"))).toBeInTheDocument();
+  });
+
+  // Simulate sorting
+  const sortButton = screen.getByText("Sort by Name"); 
+  fireEvent.click(sortButton);
+
+  await waitFor(() => {
+    const rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("Metformin Hydrochloride 1000 mg Tablet");
+    expect(rows[2]).toHaveTextContent("Penciclovir Cream; 1%");
+  });
+});
